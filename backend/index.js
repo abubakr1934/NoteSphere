@@ -128,6 +128,46 @@ app.post("/add-note", authenticateToken, async (req, res) => {
         return res.status(500).json({ error: true, message: "Internal server error" });
     }
 });
+// const mongoose = require('mongoose');
+
+app.put("/edit-note/:noteId", authenticateToken, async (req, res) => {
+    const noteId = req.params.noteId;
+    const { title, content, tags, isPinned } = req.body;
+    const { user } = req.user;
+
+    console.log("noteId:", noteId);
+    console.log("userId:", user._id);
+
+    if (!title && !content && !tags && typeof isPinned === 'undefined') {
+        return res.status(400).json({ error: true, message: "At least one field is required to update the note" });
+    }
+
+    try {
+        const note = await Note.findOne({ _id: new mongoose.Types.ObjectId(noteId), userId: new mongoose.Types.ObjectId(user._id) });
+        if (!note) {
+            console.log("Note not found");
+            return res.status(404).json({ error: true, message: "Note not found" });
+        }
+
+        if (title) note.title = title;
+        if (content) note.content = content;
+        if (tags) note.tags = tags;
+        if (typeof isPinned !== 'undefined') note.isPinned = isPinned;
+
+        await note.save();
+        return res.json({
+            error: false,
+            note,
+            message: "Note updated successfully",
+        });
+    } catch (error) {
+        console.error("Error updating note:", error);
+        return res.status(500).json({
+            error: true,
+            message: "Internal server error",
+        });
+    }
+});
 
 
 app.listen(8000)
